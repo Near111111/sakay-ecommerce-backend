@@ -1,6 +1,7 @@
 package com.sakay.ecommerce.service.impl;
 
 import com.sakay.ecommerce.dto.request.AddressRequest;
+import com.sakay.ecommerce.dto.response.AddressResponse;
 import com.sakay.ecommerce.dto.response.UserResponse;
 import com.sakay.ecommerce.entity.Address;
 import com.sakay.ecommerce.entity.User;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,25 +40,28 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<Address> getAddresses(String email) {
+    public List<AddressResponse> getAddresses(String email) {
         User user = findUser(email);
-        return addressRepository.findByUserId(user.getId());
+        return addressRepository.findByUserId(user.getId())
+                .stream()
+                .map(AddressResponse::from)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public Address addAddress(String email, AddressRequest request) {
+    public AddressResponse addAddress(String email, AddressRequest request) {
         User user = findUser(email);
         if (Boolean.TRUE.equals(request.getIsDefault())) {
             clearDefaultAddresses(user.getId());
         }
         Address address = buildAddress(request, user);
-        return addressRepository.save(address);
+        return AddressResponse.from(addressRepository.save(address));
     }
 
     @Override
     @Transactional
-    public Address updateAddress(String email, UUID addressId, AddressRequest request) {
+    public AddressResponse updateAddress(String email, UUID addressId, AddressRequest request) {
         User user = findUser(email);
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
@@ -76,7 +81,7 @@ public class UserServiceImpl implements UserService {
         address.setRegion(request.getRegion());
         address.setIsDefault(request.getIsDefault());
         address.setLabel(request.getLabel());
-        return addressRepository.save(address);
+        return AddressResponse.from(addressRepository.save(address));
     }
 
     @Override

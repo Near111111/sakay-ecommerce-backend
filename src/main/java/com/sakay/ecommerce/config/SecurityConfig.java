@@ -34,10 +34,20 @@ public class SecurityConfig {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        // Auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Public product endpoints
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        // PayMongo webhook (public)
                         .requestMatchers("/api/payments/webhook").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Swagger UI
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
+                        // Everything else needs auth
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

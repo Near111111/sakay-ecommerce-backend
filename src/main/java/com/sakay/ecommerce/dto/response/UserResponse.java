@@ -4,10 +4,10 @@ import com.sakay.ecommerce.entity.User;
 import lombok.Builder;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data @Builder
+@Data
+@Builder
 public class UserResponse {
     private UUID id;
     private String email;
@@ -16,7 +16,7 @@ public class UserResponse {
     private String phone;
     private User.Role role;
     private Boolean isActive;
-    private LocalDateTime createdAt;
+    private String createdAt; // String na lang para walang Jackson issue
 
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -27,7 +27,7 @@ public class UserResponse {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .isActive(user.getIsActive())
-                .createdAt(user.getCreatedAt())
+                .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
                 .build();
     }
 }

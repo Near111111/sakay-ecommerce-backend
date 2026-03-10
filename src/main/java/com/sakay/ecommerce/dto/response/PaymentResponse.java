@@ -5,10 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data @Builder
+@Data
+@Builder
 public class PaymentResponse {
     private UUID id;
     private UUID orderId;
@@ -16,7 +16,7 @@ public class PaymentResponse {
     private Payment.PaymentMethod method;
     private BigDecimal amount;
     private String checkoutUrl;
-    private LocalDateTime paidAt;
+    private String paidAt;
 
     public static PaymentResponse from(Payment p) {
         return PaymentResponse.builder()
@@ -26,7 +26,7 @@ public class PaymentResponse {
                 .method(p.getMethod())
                 .amount(p.getAmount())
                 .checkoutUrl(p.getCheckoutUrl())
-                .paidAt(p.getPaidAt())
+                .paidAt(p.getPaidAt() != null ? p.getPaidAt().toString() : null)
                 .build();
     }
 }

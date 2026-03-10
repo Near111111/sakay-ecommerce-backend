@@ -5,11 +5,11 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-@Data @Builder
+@Data
+@Builder
 public class ProductResponse {
     private UUID id;
     private String name;
@@ -19,7 +19,7 @@ public class ProductResponse {
     private BigDecimal basePrice;
     private List<String> images;
     private Boolean isActive;
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     public static ProductResponse from(Product p) {
         return ProductResponse.builder()
@@ -31,7 +31,7 @@ public class ProductResponse {
                 .basePrice(p.getBasePrice())
                 .images(p.getImages())
                 .isActive(p.getIsActive())
-                .createdAt(p.getCreatedAt())
+                .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().toString() : null)
                 .build();
     }
 }

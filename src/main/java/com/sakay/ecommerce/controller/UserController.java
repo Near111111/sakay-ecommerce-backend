@@ -1,8 +1,8 @@
 package com.sakay.ecommerce.controller;
 
 import com.sakay.ecommerce.dto.request.AddressRequest;
+import com.sakay.ecommerce.dto.response.AddressResponse;
 import com.sakay.ecommerce.dto.response.UserResponse;
-import com.sakay.ecommerce.entity.Address;
 import com.sakay.ecommerce.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,20 +27,20 @@ public class UserController {
     }
 
     @GetMapping("/addresses")
-    public ResponseEntity<List<Address>> getAddresses(@AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<List<AddressResponse>> getAddresses(@AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(userService.getAddresses(userDetails.getUsername()));
     }
 
     @PostMapping("/addresses")
-    public ResponseEntity<Address> addAddress(@AuthenticationPrincipal UserDetails userDetails,
-                                              @Valid @RequestBody AddressRequest request) {
+    public ResponseEntity<AddressResponse> addAddress(@AuthenticationPrincipal UserDetails userDetails,
+                                                      @Valid @RequestBody AddressRequest request) {
         return ResponseEntity.ok(userService.addAddress(userDetails.getUsername(), request));
     }
 
     @PutMapping("/addresses/{id}")
-    public ResponseEntity<Address> updateAddress(@AuthenticationPrincipal UserDetails userDetails,
-                                                 @PathVariable UUID id,
-                                                 @Valid @RequestBody AddressRequest request) {
+    public ResponseEntity<AddressResponse> updateAddress(@AuthenticationPrincipal UserDetails userDetails,
+                                                         @PathVariable UUID id,
+                                                         @Valid @RequestBody AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(userDetails.getUsername(), id, request));
     }
 
