@@ -44,36 +44,77 @@ public class OrderServiceImpl implements OrderService {
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
 
-        Map<String, Object> cart = cartService.getCart(user.getId());
-        @SuppressWarnings("unchecked")
-        Map<Object, Object> items = (Map<Object, Object>) cart.get("items");
-
-        if (items == null || items.isEmpty()) {
-            throw new BadRequestException("Cart is empty");
-        }
-
         BigDecimal shippingFee = request.getShippingFee() != null ? request.getShippingFee() : BigDecimal.valueOf(100);
         BigDecimal subtotal = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
-        for (Map.Entry<Object, Object> entry : items.entrySet()) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> item = (Map<String, Object>) entry.getValue();
-            BigDecimal price = new BigDecimal(item.get("price").toString());
-            int qty = Integer.parseInt(item.get("qty").toString());
-            BigDecimal total = price.multiply(BigDecimal.valueOf(qty));
-            subtotal = subtotal.add(total);
+        boolean hasDirectItems = request.getItems() != null && !request.getItems().isEmpty();
 
-            OrderItem orderItem = OrderItem.builder()
-                    .productId(UUID.fromString(item.get("productId").toString()))
-                    .productVariantId(item.get("variantId") != null ? UUID.fromString(item.get("variantId").toString()) : null)
-                    .productName(item.get("name").toString())
-                    .variantLabel(item.get("variantLabel") != null ? item.get("variantLabel").toString() : null)
-                    .qty(qty)
-                    .unitPrice(price)
-                    .totalPrice(total)
-                    .build();
-            orderItems.add(orderItem);
+        if (hasDirectItems) {
+            // Direct checkout — items from request body
+            for (CheckoutRequest.CheckoutItemRequest itemReq : request.getItems()) {
+                Product product = productRepository.findById(itemReq.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + itemReq.getProductId()));
+
+                BigDecimal price = product.getBasePrice();
+                String variantLabel = null;
+                UUID variantId = null;
+
+                if (itemReq.getVariantId() != null) {
+                    ProductVariant variant = variantRepository.findById(itemReq.getVariantId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Variant not found"));
+                    if (variant.getStockQty() < itemReq.getQuantity()) {
+                        throw new BadRequestException("Insufficient stock for: " + product.getName());
+                    }
+                    price = price.add(variant.getPriceModifier());
+                    variantLabel = variant.getVariantType() + ": " + variant.getVariantValue();
+                    variantId = variant.getId();
+                }
+
+                BigDecimal total = price.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+                subtotal = subtotal.add(total);
+
+                orderItems.add(OrderItem.builder()
+                        .productId(product.getId())
+                        .productVariantId(variantId)
+                        .productName(product.getName())
+                        .variantLabel(variantLabel)
+                        .qty(itemReq.getQuantity())
+                        .unitPrice(price)
+                        .totalPrice(total)
+                        .build());
+            }
+        } else {
+            // Cart-based checkout — read from Redis
+            Map<String, Object> cart = cartService.getCart(user.getId());
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> items = (Map<Object, Object>) cart.get("items");
+
+            if (items == null || items.isEmpty()) {
+                throw new BadRequestException("Cart is empty");
+            }
+
+            for (Map.Entry<Object, Object> entry : items.entrySet()) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> item = (Map<String, Object>) entry.getValue();
+                BigDecimal price = new BigDecimal(item.get("price").toString());
+                int qty = Integer.parseInt(item.get("qty").toString());
+                BigDecimal total = price.multiply(BigDecimal.valueOf(qty));
+                subtotal = subtotal.add(total);
+
+                orderItems.add(OrderItem.builder()
+                        .productId(UUID.fromString(item.get("productId").toString()))
+                        .productVariantId(item.get("variantId") != null ? UUID.fromString(item.get("variantId").toString()) : null)
+                        .productName(item.get("name").toString())
+                        .variantLabel(item.get("variantLabel") != null ? item.get("variantLabel").toString() : null)
+                        .qty(qty)
+                        .unitPrice(price)
+                        .totalPrice(total)
+                        .build());
+            }
+
+            // Only clear cart on cart-based checkout
+            cartService.clearCart(user.getId());
         }
 
         String orderNumber = "SAK-" + System.currentTimeMillis();
@@ -92,7 +133,6 @@ public class OrderServiceImpl implements OrderService {
         orderItems.forEach(i -> i.setOrder(saved));
         orderItemRepository.saveAll(orderItems);
 
-        cartService.clearCart(user.getId());
         emailService.sendOrderConfirmation(saved);
 
         return OrderResponse.from(saved);
