@@ -93,7 +93,14 @@ public class PaymentServiceImpl implements PaymentService {
                     Order order = payment.getOrder();
                     order.setStatus(Order.OrderStatus.CONFIRMED);
                     orderRepository.save(order);
-                    emailService.sendPaymentReceipt(order);
+
+                    // Get email from the lazily-loaded user safely
+                    String userEmail = order.getUser() != null ? order.getUser().getEmail() : null;
+                    if (userEmail != null) {
+                        emailService.sendPaymentReceipt(order, userEmail);
+                    } else {
+                        log.warn("Could not send payment receipt - user email not available for order {}", order.getOrderNumber());
+                    }
                 });
             }
         } catch (Exception e) {

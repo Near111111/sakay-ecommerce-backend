@@ -16,22 +16,22 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
 
     @Override
-    public void sendOrderConfirmation(Order order) {
-        send(order.getUser().getEmail(),
+    public void sendOrderConfirmation(Order order, String email) {
+        send(email,
                 "Order Confirmed - " + order.getOrderNumber(),
                 "Your order " + order.getOrderNumber() + " has been confirmed. Total: ₱" + order.getTotalAmount());
     }
 
     @Override
-    public void sendCancelNotification(Order order) {
-        send(order.getUser().getEmail(),
+    public void sendCancelNotification(Order order, String email) {
+        send(email,
                 "Order Cancelled - " + order.getOrderNumber(),
                 "Your order " + order.getOrderNumber() + " has been cancelled.");
     }
 
     @Override
-    public void sendPaymentReceipt(Order order) {
-        send(order.getUser().getEmail(),
+    public void sendPaymentReceipt(Order order, String email) {
+        send(email,
                 "Payment Receipt - " + order.getOrderNumber(),
                 "Payment received for order " + order.getOrderNumber() + ". Amount: ₱" + order.getTotalAmount());
     }

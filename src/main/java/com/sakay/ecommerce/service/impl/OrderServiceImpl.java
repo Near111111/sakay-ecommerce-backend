@@ -10,6 +10,7 @@ import com.sakay.ecommerce.repository.*;
 import com.sakay.ecommerce.service.CartService;
 import com.sakay.ecommerce.service.EmailService;
 import com.sakay.ecommerce.service.OrderService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.data.domain.Page;
@@ -33,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartService cartService;
     private final EmailService emailService;
     private final ObjectMapper objectMapper;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
@@ -118,7 +120,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         String orderNumber = "SAK-" + System.currentTimeMillis();
-        String addressSnapshot = objectMapper.writeValueAsString(address);
+        String addressSnapshot = String.format("%s, %s, %s, %s, %s %s",
+                address.getStreet(),
+                address.getBarangay() != null ? address.getBarangay() : "",
+                address.getCity(),
+                address.getProvince(),
+                address.getZipCode(),
+                address.getRegion() != null ? address.getRegion() : "").trim();
 
         Order order = Order.builder()
                 .user(user)
@@ -130,10 +138,13 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
         Order saved = orderRepository.save(order);
+        entityManager.flush();
+        entityManager.refresh(saved);
         orderItems.forEach(i -> i.setOrder(saved));
         orderItemRepository.saveAll(orderItems);
 
-        emailService.sendOrderConfirmation(saved);
+        // Pass email directly to avoid LazyInitializationException on order.getUser()
+        emailService.sendOrderConfirmation(saved, email);
 
         return OrderResponse.from(saved);
     }
@@ -162,7 +173,10 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setStatus(Order.OrderStatus.CANCELLED);
         Order saved = orderRepository.save(order);
-        emailService.sendCancelNotification(saved);
+        entityManager.flush();
+        entityManager.refresh(saved);
+        // Pass email directly to avoid LazyInitializationException on order.getUser()
+        emailService.sendCancelNotification(saved, email);
         return OrderResponse.from(saved);
     }
 
