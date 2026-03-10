@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: sakay-ecommerce
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sakay_ecommerce
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  security:
+    user:
+      name: admin
+      password: admin
+
+server:
+  port: 8080
+
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  expiration: 900000        # 15 minutes in ms
+  refresh-expiration: 604800000  # 7 days in ms
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: products
