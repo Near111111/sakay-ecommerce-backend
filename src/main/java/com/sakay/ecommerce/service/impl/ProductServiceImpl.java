@@ -84,6 +84,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
+    public void deleteProduct(UUID id) {
+        Product product = findProduct(id);
+        product.setIsActive(false);
+        productRepository.save(product);
+    }
+
+    @Override
     public List<ProductVariant> getVariants(UUID productId) {
         return variantRepository.findByProductId(productId);
     }

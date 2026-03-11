@@ -18,6 +18,7 @@ public interface ProductService {
     Page<ProductResponse> searchProducts(String name, Pageable pageable);
     ProductResponse createProduct(CreateProductRequest request);
     ProductResponse updateProduct(UUID id, CreateProductRequest request);
+    void deleteProduct(UUID id);
     List<ProductVariant> getVariants(UUID productId);
     ProductVariant addVariant(UUID productId, CreateVariantRequest request);
     String uploadImage(UUID productId, MultipartFile file);

@@ -53,6 +53,26 @@ public class AuthServiceImpl implements AuthService {
                 .role(User.Role.CUSTOMER)
                 .build();
 
+        User savedUser = userRepository.saveAndFlush(user);
+        return buildAuthResponse(savedUser, null);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse registerAdmin(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email already registered");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .phone(request.getPhone())
+                .role(User.Role.ADMIN)
+                .build();
+
         userRepository.save(user);
         return buildAuthResponse(user, null);
     }

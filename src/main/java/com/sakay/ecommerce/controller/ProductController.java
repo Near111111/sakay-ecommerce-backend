@@ -52,6 +52,13 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductVariant> addVariant(@PathVariable UUID id,
