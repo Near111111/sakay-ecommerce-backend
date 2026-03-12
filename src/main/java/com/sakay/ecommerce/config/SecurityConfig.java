@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Auth endpoints
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()  // ✅ allow preflight
                         .requestMatchers("/api/auth/**").permitAll()
                         // Public product endpoints
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
