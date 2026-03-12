@@ -12,12 +12,3 @@ WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "-Dserver.port=${PORT:8080}", "app.jar"]
-```
-
-**`.dockerignore`** (sa root din):
-```
-.git
-.gitignore
-*.md
-target/
-compose.yaml
