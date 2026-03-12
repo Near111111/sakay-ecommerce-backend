@@ -3,7 +3,7 @@ package com.sakay.ecommerce.service;
 import com.sakay.ecommerce.dto.request.CreateProductRequest;
 import com.sakay.ecommerce.dto.request.CreateVariantRequest;
 import com.sakay.ecommerce.dto.response.ProductResponse;
-import com.sakay.ecommerce.entity.ProductVariant;
+import com.sakay.ecommerce.dto.response.ProductVariantResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,7 +19,7 @@ public interface ProductService {
     ProductResponse createProduct(CreateProductRequest request);
     ProductResponse updateProduct(UUID id, CreateProductRequest request);
     void deleteProduct(UUID id);
-    List<ProductVariant> getVariants(UUID productId);
-    ProductVariant addVariant(UUID productId, CreateVariantRequest request);
+    List<ProductVariantResponse> getVariants(UUID productId);           // ✅ changed
+    ProductVariantResponse addVariant(UUID productId, CreateVariantRequest request); // ✅ changed
     String uploadImage(UUID productId, MultipartFile file);
 }

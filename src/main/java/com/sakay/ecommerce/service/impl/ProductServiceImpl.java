@@ -3,6 +3,7 @@ package com.sakay.ecommerce.service.impl;
 import com.sakay.ecommerce.dto.request.CreateProductRequest;
 import com.sakay.ecommerce.dto.request.CreateVariantRequest;
 import com.sakay.ecommerce.dto.response.ProductResponse;
+import com.sakay.ecommerce.dto.response.ProductVariantResponse;
 import com.sakay.ecommerce.entity.Product;
 import com.sakay.ecommerce.entity.ProductVariant;
 import com.sakay.ecommerce.exception.ResourceNotFoundException;
@@ -92,13 +93,16 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductVariant> getVariants(UUID productId) {
-        return variantRepository.findByProductId(productId);
+    public List<ProductVariantResponse> getVariants(UUID productId) {  // ✅ changed
+        return variantRepository.findByProductId(productId)
+                .stream()
+                .map(ProductVariantResponse::from)
+                .toList();
     }
 
     @Override
     @Transactional
-    public ProductVariant addVariant(UUID productId, CreateVariantRequest request) {
+    public ProductVariantResponse addVariant(UUID productId, CreateVariantRequest request) { // ✅ changed
         Product product = findProduct(productId);
         ProductVariant variant = ProductVariant.builder()
                 .product(product)
@@ -108,7 +112,7 @@ public class ProductServiceImpl implements ProductService {
                 .priceModifier(request.getPriceModifier())
                 .sku(request.getSku())
                 .build();
-        return variantRepository.save(variant);
+        return ProductVariantResponse.from(variantRepository.save(variant)); // ✅ changed
     }
 
     @Override

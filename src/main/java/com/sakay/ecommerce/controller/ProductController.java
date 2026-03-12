@@ -3,7 +3,7 @@ package com.sakay.ecommerce.controller;
 import com.sakay.ecommerce.dto.request.CreateProductRequest;
 import com.sakay.ecommerce.dto.request.CreateVariantRequest;
 import com.sakay.ecommerce.dto.response.ProductResponse;
-import com.sakay.ecommerce.entity.ProductVariant;
+import com.sakay.ecommerce.dto.response.ProductVariantResponse;
 import com.sakay.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}/variants")
-    public ResponseEntity<List<ProductVariant>> getVariants(@PathVariable UUID id) {
+    public ResponseEntity<List<ProductVariantResponse>> getVariants(@PathVariable UUID id) { // ✅ changed
         return ResponseEntity.ok(productService.getVariants(id));
     }
 
@@ -61,8 +61,8 @@ public class ProductController {
 
     @PostMapping("/{id}/variants")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductVariant> addVariant(@PathVariable UUID id,
-                                                     @Valid @RequestBody CreateVariantRequest request) {
+    public ResponseEntity<ProductVariantResponse> addVariant(@PathVariable UUID id,          // ✅ changed
+                                                             @Valid @RequestBody CreateVariantRequest request) {
         return ResponseEntity.ok(productService.addVariant(id, request));
     }
 
