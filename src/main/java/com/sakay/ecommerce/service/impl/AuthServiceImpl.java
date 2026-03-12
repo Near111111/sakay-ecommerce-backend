@@ -53,8 +53,8 @@ public class AuthServiceImpl implements AuthService {
                 .role(User.Role.CUSTOMER)
                 .build();
 
-        User savedUser = userRepository.saveAndFlush(user);
-        return buildAuthResponse(savedUser, null);
+        userRepository.save(user);
+        return buildAuthResponse(user, null);
     }
 
     @Override
