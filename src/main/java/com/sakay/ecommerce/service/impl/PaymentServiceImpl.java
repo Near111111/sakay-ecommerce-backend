@@ -3,9 +3,11 @@ package com.sakay.ecommerce.service.impl;
 import com.sakay.ecommerce.dto.response.PaymentResponse;
 import com.sakay.ecommerce.entity.Order;
 import com.sakay.ecommerce.entity.Payment;
+import com.sakay.ecommerce.entity.User;
 import com.sakay.ecommerce.exception.ResourceNotFoundException;
 import com.sakay.ecommerce.repository.OrderRepository;
 import com.sakay.ecommerce.repository.PaymentRepository;
+import com.sakay.ecommerce.repository.UserRepository;
 import com.sakay.ecommerce.service.SmsService;
 import com.sakay.ecommerce.service.PaymentService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final UserRepository userRepository;
     private final SmsService smsService;
 
     @Value("${paymongo.secret-key}")
@@ -42,7 +45,6 @@ public class PaymentServiceImpl implements PaymentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        // If a payment link already exists and is still pending, reuse it
         Optional<Payment> existing = paymentRepository.findByOrderId(orderId);
         if (existing.isPresent()
                 && existing.get().getStatus() == Payment.PaymentStatus.PENDING
@@ -109,12 +111,14 @@ public class PaymentServiceImpl implements PaymentService {
                     order.setStatus(Order.OrderStatus.CONFIRMED);
                     orderRepository.save(order);
 
-                    String userPhone = order.getUser() != null ? order.getUser().getPhone() : null;
-                    if (userPhone != null) {
-                        smsService.sendPaymentReceipt(order, userPhone);
-                    } else {
-                        log.warn("Could not send payment receipt SMS - phone not available for order {}", order.getOrderNumber());
-                    }
+                    // Fetch user directly to avoid LazyInitializationException
+                    userRepository.findById(order.getUser().getId()).ifPresent(user -> {
+                        if (user.getPhone() != null) {
+                            smsService.sendPaymentReceipt(order, user.getPhone());
+                        } else {
+                            log.warn("No phone for user {} — skipping SMS", user.getEmail());
+                        }
+                    });
                 });
             }
         } catch (Exception e) {
