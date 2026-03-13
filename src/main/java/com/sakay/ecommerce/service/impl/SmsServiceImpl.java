@@ -18,9 +18,6 @@ public class SmsServiceImpl implements SmsService {
     @Value("${txtbox.api-key}")
     private String apiKey;
 
-    @Value("${txtbox.sender-id:Sakay}")
-    private String senderId;
-
     @Override
     public void sendOrderConfirmation(Order order, String phone) {
         String message = "Salamat sa iyong order! Order #" + order.getOrderNumber() +
@@ -46,24 +43,23 @@ public class SmsServiceImpl implements SmsService {
     private void send(String to, String message) {
         try {
             RestTemplate restTemplate = new RestTemplate();
-            String url = "https://app.txtbox.io/api/sms/send";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + apiKey);
+            headers.set("X-TXTBOX-Auth", apiKey);
 
-            Map<String, String> body = new HashMap<>();
-            body.put("to", to);
+            Map<String, Object> body = new HashMap<>();
+            body.put("number", to);
             body.put("message", message);
-            body.put("sender_id", senderId);
 
-            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://ws-v2.txtbox.com/messaging/v1/sms/push", request, String.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
                 log.error("Failed to send SMS to {}: {}", to, response.getBody());
             } else {
-                log.info("SMS sent to {}", to);
+                log.info("SMS sent to {}: {}", to, response.getBody());
             }
         } catch (Exception e) {
             log.error("Failed to send SMS to {}: {}", to, e.getMessage());

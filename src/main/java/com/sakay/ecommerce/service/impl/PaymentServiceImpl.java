@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -41,33 +42,47 @@ public class PaymentServiceImpl implements PaymentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = buildHeaders();
+        // If a payment link already exists and is still pending, reuse it
+        Optional<Payment> existing = paymentRepository.findByOrderId(orderId);
+        if (existing.isPresent()
+                && existing.get().getStatus() == Payment.PaymentStatus.PENDING
+                && existing.get().getCheckoutUrl() != null) {
+            log.info("Reusing existing payment link for order {}", order.getOrderNumber());
+            return PaymentResponse.from(existing.get());
+        }
 
-        Map<String, Object> body = Map.of(
-                "data", Map.of("attributes", Map.of(
-                        "amount", order.getTotalAmount().multiply(java.math.BigDecimal.valueOf(100)).intValue(),
-                        "currency", "PHP",
-                        "description", "Payment for order " + order.getOrderNumber()
-                ))
-        );
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = buildHeaders();
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.postForEntity(PAYMONGO_BASE + "/links", entity, Map.class);
+            Map<String, Object> body = Map.of(
+                    "data", Map.of("attributes", Map.of(
+                            "amount", order.getTotalAmount().multiply(java.math.BigDecimal.valueOf(100)).intValue(),
+                            "currency", "PHP",
+                            "description", "Payment for order " + order.getOrderNumber()
+                    ))
+            );
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
-        @SuppressWarnings("unchecked")
-        Map<String, Object> attributes = (Map<String, Object>) data.get("attributes");
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            ResponseEntity<Map> response = restTemplate.postForEntity(PAYMONGO_BASE + "/links", entity, Map.class);
 
-        Payment payment = Payment.builder()
-                .order(order)
-                .paymongoLinkId(data.get("id").toString())
-                .amount(order.getTotalAmount())
-                .checkoutUrl(attributes.get("checkout_url").toString())
-                .build();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> attributes = (Map<String, Object>) data.get("attributes");
 
-        return PaymentResponse.from(paymentRepository.save(payment));
+            Payment payment = Payment.builder()
+                    .order(order)
+                    .paymongoLinkId(data.get("id").toString())
+                    .amount(order.getTotalAmount())
+                    .checkoutUrl(attributes.get("checkout_url").toString())
+                    .build();
+
+            return PaymentResponse.from(paymentRepository.save(payment));
+        } catch (Exception e) {
+            log.error("PayMongo createLink failed for order {}: {}", order.getOrderNumber(), e.getMessage());
+            throw new RuntimeException("Failed to create payment link. Please try again.");
+        }
     }
 
     @Override
