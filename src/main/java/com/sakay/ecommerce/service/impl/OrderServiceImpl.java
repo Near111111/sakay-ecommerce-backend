@@ -8,7 +8,7 @@ import com.sakay.ecommerce.exception.BadRequestException;
 import com.sakay.ecommerce.exception.ResourceNotFoundException;
 import com.sakay.ecommerce.repository.*;
 import com.sakay.ecommerce.service.CartService;
-import com.sakay.ecommerce.service.EmailService;
+import com.sakay.ecommerce.service.SmsService;
 import com.sakay.ecommerce.service.OrderService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
     private final CartService cartService;
-    private final EmailService emailService;
+    private final SmsService smsService;
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
 
@@ -53,7 +53,6 @@ public class OrderServiceImpl implements OrderService {
         boolean hasDirectItems = request.getItems() != null && !request.getItems().isEmpty();
 
         if (hasDirectItems) {
-            // Direct checkout — items from request body
             for (CheckoutRequest.CheckoutItemRequest itemReq : request.getItems()) {
                 Product product = productRepository.findById(itemReq.getProductId())
                         .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + itemReq.getProductId()));
@@ -87,7 +86,6 @@ public class OrderServiceImpl implements OrderService {
                         .build());
             }
         } else {
-            // Cart-based checkout — read from Redis
             Map<String, Object> cart = cartService.getCart(user.getId());
             @SuppressWarnings("unchecked")
             Map<Object, Object> items = (Map<Object, Object>) cart.get("items");
@@ -115,7 +113,6 @@ public class OrderServiceImpl implements OrderService {
                         .build());
             }
 
-            // Only clear cart on cart-based checkout
             cartService.clearCart(user.getId());
         }
 
@@ -143,8 +140,8 @@ public class OrderServiceImpl implements OrderService {
         orderItems.forEach(i -> i.setOrder(saved));
         orderItemRepository.saveAll(orderItems);
 
-        // Pass email directly to avoid LazyInitializationException on order.getUser()
-        emailService.sendOrderConfirmation(saved, email);
+        // Send SMS using address phone number
+        smsService.sendOrderConfirmation(saved, address.getPhone());
 
         return OrderResponse.from(saved);
     }
@@ -166,6 +163,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse cancelOrder(String email, UUID orderId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (order.getStatus() != Order.OrderStatus.PENDING) {
@@ -175,8 +174,7 @@ public class OrderServiceImpl implements OrderService {
         Order saved = orderRepository.save(order);
         entityManager.flush();
         entityManager.refresh(saved);
-        // Pass email directly to avoid LazyInitializationException on order.getUser()
-        emailService.sendCancelNotification(saved, email);
+        smsService.sendCancelNotification(saved, user.getPhone());
         return OrderResponse.from(saved);
     }
 

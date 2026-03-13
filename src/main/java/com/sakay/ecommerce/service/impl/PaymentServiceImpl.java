@@ -6,7 +6,7 @@ import com.sakay.ecommerce.entity.Payment;
 import com.sakay.ecommerce.exception.ResourceNotFoundException;
 import com.sakay.ecommerce.repository.OrderRepository;
 import com.sakay.ecommerce.repository.PaymentRepository;
-import com.sakay.ecommerce.service.EmailService;
+import com.sakay.ecommerce.service.SmsService;
 import com.sakay.ecommerce.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
-    private final EmailService emailService;
+    private final SmsService smsService;
 
     @Value("${paymongo.secret-key}")
     private String paymongoSecretKey;
@@ -94,12 +94,11 @@ public class PaymentServiceImpl implements PaymentService {
                     order.setStatus(Order.OrderStatus.CONFIRMED);
                     orderRepository.save(order);
 
-                    // Get email from the lazily-loaded user safely
-                    String userEmail = order.getUser() != null ? order.getUser().getEmail() : null;
-                    if (userEmail != null) {
-                        emailService.sendPaymentReceipt(order, userEmail);
+                    String userPhone = order.getUser() != null ? order.getUser().getPhone() : null;
+                    if (userPhone != null) {
+                        smsService.sendPaymentReceipt(order, userPhone);
                     } else {
-                        log.warn("Could not send payment receipt - user email not available for order {}", order.getOrderNumber());
+                        log.warn("Could not send payment receipt SMS - phone not available for order {}", order.getOrderNumber());
                     }
                 });
             }
