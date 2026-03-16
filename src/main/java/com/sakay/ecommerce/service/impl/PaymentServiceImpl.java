@@ -37,6 +37,9 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${paymongo.secret-key}")
     private String paymongoSecretKey;
 
+    @Value("${app.frontend-url:http://localhost:3000}")
+    private String frontendUrl;
+
     private static final String PAYMONGO_BASE = "https://api.paymongo.com/v1";
 
     @Override
@@ -57,11 +60,18 @@ public class PaymentServiceImpl implements PaymentService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = buildHeaders();
 
+            String successUrl = frontendUrl + "/payment-return";
+            String failedUrl  = frontendUrl + "/payment-return";
+
             Map<String, Object> body = Map.of(
                     "data", Map.of("attributes", Map.of(
                             "amount", order.getTotalAmount().multiply(java.math.BigDecimal.valueOf(100)).intValue(),
                             "currency", "PHP",
-                            "description", "Payment for order " + order.getOrderNumber()
+                            "description", "Payment for order " + order.getOrderNumber(),
+                            "redirect", Map.of(
+                                    "success", successUrl,
+                                    "failed",  failedUrl
+                            )
                     ))
             );
 
@@ -111,7 +121,6 @@ public class PaymentServiceImpl implements PaymentService {
                     order.setStatus(Order.OrderStatus.CONFIRMED);
                     orderRepository.save(order);
 
-                    // Fetch user directly to avoid LazyInitializationException
                     userRepository.findById(order.getUser().getId()).ifPresent(user -> {
                         if (user.getPhone() != null) {
                             smsService.sendPaymentReceipt(order, user.getPhone());
